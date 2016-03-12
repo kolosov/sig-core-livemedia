@@ -29,6 +29,7 @@ function patch_config {
   #enable docker settings
   #sed "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir~" /tmp/docker.service
   sed -i "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir~" /usr/lib/systemd/system/docker.service
+  systemctl daemon-reload
   systemctl start docker
 }
 
