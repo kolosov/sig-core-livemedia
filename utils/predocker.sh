@@ -27,8 +27,8 @@ function patch_config {
   echo "New docker path is $1"
   new_dock_dir=$1
   #enable docker settings
-  #sed 's/ExecStart=\/usr\/bin\/docker daemon -H fd:\/\//ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir/' /usr/lib/systemd/system/docker.service
-  sed "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir~" /tmp/docker.service
+  #sed "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir~" /tmp/docker.service
+  sed "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G $new_dock_dir~" /usr/lib/systemd/system/docker.service
   systemctl start docker
 }
 
@@ -92,10 +92,10 @@ then
   #mount found disks and prepare file list
   for disk in $flist
   do
-  #  echo $disk
-  #  echo ${disk:5}
-    echo mkdir /mnt/${disk:5}
-    echo mount $disk /mnt/${disk:5}
+    #echo mkdir /mnt/${disk:5}
+    #echo mount $disk /mnt/${disk:5}
+    mkdir /mnt/${disk:5}
+    mount $disk /mnt/${disk:5}
     echo /mnt/${disk:5} >> /tmp/mounted_dirs2
   done
 
