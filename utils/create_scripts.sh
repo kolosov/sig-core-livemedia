@@ -25,9 +25,54 @@ do
 done
 
 
+function patch_config {
+  echo "New docker path is \$1"
+  new_dock_dir=\$1
+  #enable docker settings
+
+  sed -i "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -G \$new_dock_dir~" /usr/lib/systemd/system/docker.service
+  systemctl daemon-reload
+  systemctl start docker
+}
+
+#find docker dir, argument is a dir list
+function find_docker_dir_by_filelist {
+  dir_list=\`cat \$1\`
+
+  for dir in \$dir_list
+  do
+    if [ -e "\$dir/\$mark_filename" ]
+    then
+      lmark_dir=\$dir
+	  echo \$lmark_dir
+      return 0
+    fi
+  done
+  echo "FALSEEE"
+  return 1
+}
+
+
 if [[ -z "\$mark_dir" ]]
 then
   echo "Dir was not set, try looking for the dir"
+  echo "1. Checking for already mounted drives"
+  df | awk '{print \$6}' |sort|uniq > /tmp/mounted_dirs1
+
+  echo "Find for /tmp/mounted_dirs1"
+  found_place=\$(find_docker_dir_by_filelist "/tmp/mounted_dirs1")
+  ret_val=\$?
+  echo "found_place = \$found_place"
+  if [ "\$ret_val" -eq "0" ]
+  then
+    echo "Dir was found, patching"
+    patch_config \$found_place
+
+    exit 0
+  fi
+  
+  
+  echo "2. Looking for unmounted drives and mount"
   #get mounted
   mount | cut -d\  -f 1|sort|uniq > /tmp/mounted_disks
 
@@ -39,53 +84,43 @@ then
 
   flist=\`cat /tmp/need_disks\`
 
-
+  echo -n > /tmp/mounted_dirs2
   for disk in \$flist
   do
-  #  echo \$disk
-  #  echo \${disk:5}
-    echo mkdir /mnt/\${disk:5}
-    echo mount \$disk /mnt/\${disk:5}
+
+    mkdir /mnt/\${disk:5}
+    mount \$disk /mnt/\${disk:5}
+    echo /mnt/\${disk:5} >> /tmp/mounted_dirs2
   done
 
-  #find the dir
-
-  for dir in /mnt/*
-  do
-    echo \$dir
-    if [ -e "\$dir/\$mark_filename" ]
-    then
-      echo "Dir was found: \$dir"
-      mark_dir=\$dir
-    fi
-  done
-
-  if [[ -z "\$mark_dir" ]]
+  echo "Find for /tmp/mounted_dirs2"
+  found_place=\$(find_docker_dir_by_filelist "/tmp/mounted_dirs2")
+  ret_val=\$?
+  echo "found_place = \$found_place"
+  if [ "\$ret_val" -eq "0" ]
   then
-    echo "Dir was not found, set it as parameter: ./predocker -d docker_data_directory"
-    exit 1
-  else
-    echo "Dir was found: \$mark_dir"
+    echo "Dir was found, patching"
+    patch_config \$found_place
+
+    exit 0
   fi
+
+  echo "Dir was not found, set it as parameter: ./predocker -d docker_data_directory"
+  exit 1
 fi
 
-#enable docker settings
-#sed 's/ExecStart=\/usr\/bin\/docker daemon -H fd:\/\//ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -g $mark_dir/' /usr/lib/systemd/system/docker.service
-sed -i "s~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/~ExecStart=\/usr\/bin\/docker daemon -H fd:\/\/ -g \$mark_dir~" /usr/lib/systemd/system/docker.service
-
-systemctl start docker
 EOF
 
-chmod a+x /usr/bin/predocker.sh
+chmod a+x /usr/bin/predocker1.sh
 
-cat > /usr/bin/testdockx.sh << EOF
+cat > /usr/bin/testdockx1.sh << EOF
 #!/bin/bash
 
 docker build --rm -t xclock1 -f /home/Dockerfile .
 docker run -ti --rm -e DISPLAY=\$DISPLAY -v /tmp/.X11-unix/:/tmp/.X11-unix xclock1
 
 EOF
-chmod a+x /usr/bin/testdockx.sh
+chmod a+x /usr/bin/testdockx1.sh
 
 
 cat > /home/Dockerfile << EOF
